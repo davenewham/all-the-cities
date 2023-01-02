@@ -1,64 +1,91 @@
 #!/usr/bin/env node
 
-const fs = require('fs')
-const split = require('split2')
-const through = require('through2')
-const cities = require('cities-with-1000');
-const Pbf = require('pbf')
+import fs from 'fs';
+import split from 'split2';
+import through from 'through2';
+import Pbf from 'pbf';
 
-var pbf = new Pbf()
+const fields = [
+    'geonameId',
+    'name',
+    'asciiName',
+    'alternateNames',
+    'latitude',
+    'longitude',
+    'featureClass',
+    'featureCode',
+    'countryCode',
+    'cc2',
+    'admin1Code',
+    'admin2Code',
+    'admin3Code',
+    'admin4Code',
+    'population',
+    'elevation',
+    'dem',
+    'timezone',
+    'modificationDate'
+] as const;
 
-var lastLat = 0
-var lastLon = 0
+type fieldValues = {
+    [K in typeof fields[any]]: any
+}
 
-var rowStream = through(function (line, enc, next) {
-    var row = line.toString().split('\t').reduce(function (acc, x, ix) {
-        var key = cities.fields[ix]
-        if (key === 'alternativeNames') x = x.split(',')
-        if (key === 'lat' || key === 'lon') x = parseFloat(x)
-        if (key === 'elevation') x = x ? parseInt(x, 10) : undefined
+let pbf = new Pbf()
+
+let lastLat = 0
+let lastLon = 0
+let rowStream = through(function (line, enc, next) {
+    let row = line.toString().split('\t').reduce(function (acc: any, x: any, ix: number) {
+        let key = fields[ix]
+
+
+        if (key === 'alternateNames') x = x.split(',')
+        if (key === 'latitude' || key === 'longitude') x = parseFloat(x)
+        if (key === 'longitude') x = x ? parseInt(x, 10) : undefined
         if (key === 'population') x = x ? parseInt(x, 10) : undefined
 
         acc[key] = x
         return acc
     }, {})
-    if (!row.id) return
-    pbf.writeRawMessage(writeCity, row)
+    if (!row.geonameId) return
 
+    pbf.writeRawMessage(writeCity, row)
     next()
 })
 
-function writeCity(city, pbf) {
-    pbf.writeSVarintField(1, city.id)
+
+
+function writeCity(city: fieldValues, pbf: any) {
+    pbf.writeSVarintField(1, city.geonameId)
     pbf.writeStringField(2, city.name)
-    pbf.writeStringField(3, city.country)
-    
-    if (city.altCountry && city.altCountry !== city.country)
-        pbf.writeStringField(4, city.altCountry)
+    pbf.writeStringField(3, city.countryCode)
 
-    if (city.municipality)
-        pbf.writeStringField(5, city.municipality)
+    if (city.alternateNames && city.alternateNames !== city.countryCode)
+        pbf.writeStringField(4, city.alternateNames)
 
-    if (city.municipalitySubdivision)
-        pbf.writeStringField(6, city.municipalitySubdivision)
+    if (city.admin3Code)
+        pbf.writeStringField(5, city.admin3Code)
+
+    if (city.admin4Code)
+        pbf.writeStringField(6, city.admin4Code)
 
     pbf.writeStringField(7, city.featureCode)
-    pbf.writeStringField(8, city.adminCode)
+    pbf.writeStringField(8, city.admin1Code)
 
     if (city.population)
         pbf.writeVarintField(9, city.population)
 
-    const lat = Math.round(1e5 * city.lat)
-    const lon = Math.round(1e5 * city.lon)
+    const lat = Math.round(1e5 * city.latitude)
+    const lon = Math.round(1e5 * city.longitude)
     pbf.writeSVarintField(10, lon - lastLon)
     pbf.writeSVarintField(11, lat - lastLat)
-   
-   
+
     lastLat = lat
     lastLon = lon
 }
 
-fs.createReadStream(cities.file)
+fs.createReadStream("cities1000.txt")
     .pipe(split())
     .pipe(rowStream)
 
