@@ -2,8 +2,8 @@
 
 import fs from 'fs';
 import split from 'split2';
-import through from 'through2';
 import Pbf from 'pbf';
+import { Transform } from 'node:stream';
 
 const fields = [
     'geonameId',
@@ -35,10 +35,10 @@ let pbf = new Pbf()
 
 let lastLat = 0
 let lastLon = 0
-let rowStream = through(function (line, enc, next) {
+
+const rowStream = new Transform({transform (line, encoding, callback) {
     let row = line.toString().split('\t').reduce(function (acc: any, x: any, ix: number) {
         let key = fields[ix]
-
 
         if (key === 'alternateNames') x = x.split(',')
         if (key === 'latitude' || key === 'longitude') x = parseFloat(x)
@@ -51,8 +51,8 @@ let rowStream = through(function (line, enc, next) {
     if (!row.geonameId) return
 
     pbf.writeRawMessage(writeCity, row)
-    next()
-})
+    callback()
+}});
 
 
 

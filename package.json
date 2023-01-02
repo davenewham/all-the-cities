@@ -33,11 +33,9 @@
   "devDependencies": {
     "@types/pbf": "^3.0.2",
     "@types/split2": "^3.2.1",
-    "@types/through2": "^2.0.38",
     "cities-with-1000": "^1.0.4",
     "split2": "^2.0.1",
-    "tape": "^4.11.0",
-    "through2": "^2.0.5"
+    "tape": "^4.11.0"
   },
   "dependencies": {
     "pbf": "^3.2.1"
